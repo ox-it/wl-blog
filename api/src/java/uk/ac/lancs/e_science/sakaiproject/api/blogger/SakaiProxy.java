@@ -23,6 +23,7 @@ import java.util.Set;
 import org.sakaiproject.authz.api.AuthzGroup;
 import org.sakaiproject.authz.api.AuthzGroupService;
 import org.sakaiproject.authz.api.Role;
+import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
 import org.sakaiproject.site.api.ToolConfiguration;
@@ -41,6 +42,7 @@ public class SakaiProxy {
     private static AuthzGroupService authzGroupService = org.sakaiproject.authz.cover.AuthzGroupService.getInstance();
     private static SiteService siteService = org.sakaiproject.site.cover.SiteService.getInstance();
     private static AuthenticationManager authManager = org.sakaiproject.user.cover.AuthenticationManager.getInstance();
+    private static String extraMaintainRoles[] = null;
 
     
     public static String getCurrentSiteId(){
@@ -70,14 +72,14 @@ public class SakaiProxy {
     		AuthzGroup realm = authzGroupService.getAuthzGroup(site.getReference());
     		User sakaiUser = UserDirectoryService.getInstance().getUser(userId);
     		Role r = realm.getUserRole(sakaiUser.getId());
-    		if(r.getId().equals(realm.getMaintainRole())) // This bit could be wrong
-    		{
+    		String roleName = r.getId();
+    		if (roleName.equals(realm.getMaintainRole())) 
     			return true;
-    		} else {
-    			return false;
+    		for (String maintainRole: getExtraMaintainRoles()) {
+    			if(roleName.equals(maintainRole))
+    				return true;
     		}
-		
-    		
+    		return false;
     	} catch (Exception e){
     		e.printStackTrace();
     		return false;
@@ -106,4 +108,19 @@ public class SakaiProxy {
     public static boolean isCurrentUserMaintainer(){
     	return isMaintainer(getCurrentUserId());
     }
+    
+    private static String[] getExtraMaintainRoles() {
+    	if (extraMaintainRoles == null) { 
+
+    		String[] roles = ServerConfigurationService.getString("blog.extra.maintain.roles", "").split(",");
+    		for (int i = 0; i < roles.length; i++) {
+    			roles[i] = roles[i].trim();
+    		}
+    		extraMaintainRoles = roles;
+    	}
+    	return extraMaintainRoles;
+    }
+ 
+
+    
 }
