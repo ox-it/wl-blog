@@ -18,6 +18,7 @@
 package uk.ac.lancs.e_science.sakaiproject.impl.blogger.persistence;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -652,21 +653,34 @@ public class SakaiPersistenceManager{
     }
 
     public void initRepository() throws PersistenceException{
-    	
-    	if(!SakaiProxy.isAutoDDL())
-    		return;
-    	
-        Connection connection = getConnection();
-        try{
-            Collection statements = sqlGenerator.getCreateStatementsForPost();
-            executeSQL(statements,connection);
-        }  catch (Exception e){
-        	logger.error("Failed to initRepository",e);
-        }
-        finally{
-            releaseConnection(connection);
-        }
 
+        if(!SakaiProxy.isAutoDDL())
+            return;
+        // Follow sakai DDL logic, if first statement fails then we've already
+        // done ddl.
+        Collection statements = sqlGenerator.getCreateStatementsForPost();
+        Iterator statementIt = statements.iterator();
+        if (statementIt.hasNext()) {
+            Connection connection = null;
+            try {
+                connection = getConnection();
+                Object statement = statementIt.next();
+                executeSQL(Collections.singleton(statement), connection);
+                statements.remove(statement);
+                try {
+                    executeSQL(statements,connection);
+                }  catch (Exception e){
+                    logger.error("Failed to initRepository",e);
+                }
+            } catch (PersistenceException pe) {
+                logger.debug("Not initing repository as it looks like it's already been done");
+                return;
+            }finally{
+                releaseConnection(connection);
+            }
+        } else {
+            logger.warn("No statements found for createing database.");
+        }
     }
 
 }
