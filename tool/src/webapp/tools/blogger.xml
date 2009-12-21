@@ -18,7 +18,7 @@
 
    <tool id="blogger"
        title="Blogger"
-       description="A blogger">
+       description="A shareable on-line journal">
 
        <category name="course" />
        <category name="project" />
